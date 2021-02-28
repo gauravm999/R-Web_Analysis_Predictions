@@ -1,0 +1,197 @@
+---
+title: 'Project : Web Data Analysis'
+author: "Gaurav Mahajan"
+date: "1/12/2021"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+linkedin profile: linkedin.com/in/mahajang
+
+Background and Objective:
+Perform Statistics and build  Prediction models to forecast demand for Walmart Store
+
+Domain: Retail
+
+
+Load Data
+```{r}
+library(plyr) #cleaning
+library(dplyr) 
+library(e1071)
+library(caret)
+library(mlbench)
+library(ggplot2)
+library(tidyverse)
+library(funModeling) 
+library(Hmisc)
+library(car) #vif
+
+
+setwd("C:/OLD_LAPTOP/Gaurav/Purdue/4. Data Science with R/3. Practice_Projects")
+internet_data<- read.csv("C:/OLD_LAPTOP/Gaurav/Purdue/4. Data Science with R/3. Practice_Projects/Web Data Analysis Project/internet_dataset.csv", header=TRUE)
+
+dim(internet_data)
+names(internet_data)
+str(internet_data)
+#View(internet_data)
+
+summary(internet_data)
+```
+
+
+Question 1 (part1)- Data insights:
+1. There are ~32K records with 8 variables. Of which, 6 are numeric and 2 are categorical.
+2. Means of Bounces are 0.7, Time spent in a page is 73 (secs.), Unique page views is 1 and No. of visits is 1
+
+
+```{r}
+#Plots:
+library(funModeling)
+
+freq(internet_data$Continent) #freq plots of categorical variable
+freq(internet_data$Sourcegroup) #freq plots of categorical variable
+freq(internet_data$Bounces) #freq plots of Numerical variable
+freq(internet_data$Exits) #freq plots of Numerical variable
+#freq(internet_data$Timeinpage) #freq plots of Numerical variable
+freq(internet_data$Uniquepageviews) #freq plots of Numerical variable
+freq(internet_data$Visits) #freq plots of Numerical variable
+freq(internet_data$BouncesNew) #freq plots of Numerical variable
+
+#Count of Visitors by Continent and Sourcegroup:
+Continent_Sourcegrp<- ggplot(internet_data %>% count(Continent, Sourcegroup) %>%    # Group by Continent and Sourcegroup, then count number in each group
+         mutate(pct=n/sum(n)),              # Calculate percent within each region
+       aes(Continent, n, fill=Sourcegroup)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=paste0(sprintf("%1.1f", pct*100),"%")),
+            position=position_stack(vjust=0.5))
+Continent_Sourcegrp
+
+#Pageviews vs. Visits
+Pg_vs_Vi<- ggplot(data = internet_data) + 
+  geom_point(mapping = aes(x = Uniquepageviews, y = Visits))
+Pg_vs_Vi
+
+```
+Insights: Question 1 (part2) :
+
+1. ~82% of the Total vistors are coming from N.America (62%) and EU (20%)
+2. ~59% of the vistors are coming from Source groups - Google and Direct
+3. ~93% of the visitors had viewed the page 1 time
+4. ~74% of the users had visited 1 time on the site
+5. ~37% of 62% of total visitors in N.America  are from Facebook and Direct
+6. There seems to strong coorelation between page views and visits as the graph shows linear trend
+
+
+Question 2 (part1) - Correlation:
+
+```{r}
+library(corrplot)
+internet_data2<- internet_data[,c(1:2,5:8)] #Data with numerical variables 
+summary(internet_data2)
+cor = cor(internet_data2)
+corrplot(cor, method="number", type = "upper", order = "hclust", 
+         tl.col = "black")
+```
+
+Insights (Question-2 part1) :
+There is a high correlation (>0.8) between Exits vs. Bounces, UniquePageViews and Visits
+There is a medium correlation (0.67) between Bounces vs. UniquePageViews
+There is a high correlation (0.81) between Visits vs. UniquePageViews
+
+Question-2 (part2) - Model (to check impact of Unique page views on Visits):
+
+```{r}
+M1<- lm(Visits  ~ Uniquepageviews, internet_data)
+summary(M1)
+
+```
+
+Model Inpterpretation (Question-2 part2) : 
+1. Model shows with every 1 user Visit the Uniquepage views increase by 1 (as expected)
+2. Model shows Adj. R sq. of 0.66 (sub optimal) with significant p value (2.2e-16) and F-stats: 6.3e+04
+
+
+Question 3:
+```{r}
+M2<- lm(Exits  ~ ., internet_data)
+summary(M2)
+
+```
+
+Model Inpterpretation (Ques.3):
+Variables that impact Exits are Bounces,Sourcegroups(primarily Google, tableausoftware, visualisingdata, Facebook), Timeinpage, Uniquepageviews and Visits. 
+
+
+Question-4 (Factors impacting Exit page) - step-wise models:
+
+```{r}
+library(memisc)
+M1<-lm(formula=Exits~ Bounces,data=internet_data)
+M2<-update(M1,.~.+Sourcegroup)
+M3<-update(M2,.~.+Timeinpage)
+M4<-update(M3,.~.+Uniquepageviews)
+M5<-update(M4,.~.+Visits)
+mtable(M1,M2,M3,M4,M5)
+summary(M5)
+
+#Multi-collinearity check:
+vif(M5)
+
+
+#Check Regression Assumptions on Non-linearility, multi-collinearity and non-independence of errors
+# Line  arity Plots
+par(mfrow=c(1,2))
+plot(M5)
+
+```
+
+
+Model Inpterpretation (Ques. 4):
+1. M5 model gives optimal results with lowest no. of variables compare to all other models.
+2. Model gives 0.79 adj. R sq. with p-value < 2.2e-16 and F stat: 1.101e+04
+3. Key factors impacting exits are Bounces, Sourcegroup(fb, google, tableau, visualising data), Timeinpage and Uniquepageviews
+4. vif less than 10 in all variables of the M5 model
+
+
+Question-5 (Factors impacting Bounce):
+
+```{r}
+library(memisc)
+
+names(internet_data)
+M1_bounce<-lm(formula=Bounces ~Exits,data=internet_data)
+M2_bounce<-update(M1_bounce,.~ +Continent)
+M3_bounce<-update(M2_bounce,.~.+Sourcegroup)
+M4_bounce<-update(M3_bounce,.~.+Timeinpage)
+M5_bounce<-update(M4_bounce,.~.+Uniquepageviews)
+M6_bounce<-update(M5_bounce,.~.+Visits)
+
+mtable(M1_bounce,M2_bounce,M3_bounce,M4_bounce,M5_bounce,M6_bounce)
+
+summary(M6_bounce)
+
+
+# Multi-collinearity check
+vif(M6_bounce) # vif less than 10 in all variables of the M6_bounce model
+
+
+#Check Regression Assumptions on Non-linearility, multi-collinearity and non-independence of errors
+# Line  arity Plots
+par(mfrow=c(1,2))
+plot(M6_bounce)
+
+
+```
+
+
+Model Inpterpretation (Ques. 5):
+1. M6_bounce model gives optimal results with lowest no. of variables compare to all other models.
+2. Model gives 0.7 adj. R sq. with p-value < 2.2e-16 and F stat: 4732
+3. Key factors impacting Bounces are - Sourcegroup(google, tableau, visualising data), Timeinpage and Uniquepageviews
+4. vif less than 10 in all variables of the M6_bounce model
+
+
+
+
