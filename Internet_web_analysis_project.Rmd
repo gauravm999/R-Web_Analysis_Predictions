@@ -1,5 +1,5 @@
 ---
-title: 'Project : Web Data Analysis'
+title: 'Web Data Analysis and Prediction'
 author: "Gaurav Mahajan"
 date: "1/12/2021"
 output:
@@ -29,8 +29,8 @@ library(Hmisc)
 library(car) #vif
 
 
-setwd("C:/OLD_LAPTOP/Gaurav/Purdue/4. Data Science with R/3. Practice_Projects")
-internet_data<- read.csv("C:/OLD_LAPTOP/Gaurav/Purdue/4. Data Science with R/3. Practice_Projects/Web Data Analysis Project/internet_dataset.csv", header=TRUE)
+setwd("C:/")
+internet_data<- read.csv("C:/internet_dataset.csv", header=TRUE)
 
 dim(internet_data)
 names(internet_data)
@@ -41,7 +41,7 @@ summary(internet_data)
 ```
 
 
-Question 1 (part1)- Data insights:
+Data insights:
 1. There are ~32K records with 8 variables. Of which, 6 are numeric and 2 are categorical.
 2. Means of Bounces are 0.7, Time spent in a page is 73 (secs.), Unique page views is 1 and No. of visits is 1
 
@@ -74,7 +74,7 @@ Pg_vs_Vi<- ggplot(data = internet_data) +
 Pg_vs_Vi
 
 ```
-Insights: Question 1 (part2) :
+Insights :
 
 1. ~82% of the Total vistors are coming from N.America (62%) and EU (20%)
 2. ~59% of the vistors are coming from Source groups - Google and Direct
@@ -84,7 +84,7 @@ Insights: Question 1 (part2) :
 6. There seems to strong coorelation between page views and visits as the graph shows linear trend
 
 
-Question 2 (part1) - Correlation:
+Correlation:
 
 ```{r}
 library(corrplot)
@@ -95,12 +95,12 @@ corrplot(cor, method="number", type = "upper", order = "hclust",
          tl.col = "black")
 ```
 
-Insights (Question-2 part1) :
+Insights  :
 There is a high correlation (>0.8) between Exits vs. Bounces, UniquePageViews and Visits
 There is a medium correlation (0.67) between Bounces vs. UniquePageViews
 There is a high correlation (0.81) between Visits vs. UniquePageViews
 
-Question-2 (part2) - Model (to check impact of Unique page views on Visits):
+Model (to check impact of Unique page views on Visits):
 
 ```{r}
 M1<- lm(Visits  ~ Uniquepageviews, internet_data)
@@ -108,12 +108,11 @@ summary(M1)
 
 ```
 
-Model Inpterpretation (Question-2 part2) : 
+Model Inpterpretation : 
 1. Model shows with every 1 user Visit the Uniquepage views increase by 1 (as expected)
 2. Model shows Adj. R sq. of 0.66 (sub optimal) with significant p value (2.2e-16) and F-stats: 6.3e+04
 
 
-Question 3:
 ```{r}
 M2<- lm(Exits  ~ ., internet_data)
 summary(M2)
@@ -124,7 +123,7 @@ Model Inpterpretation (Ques.3):
 Variables that impact Exits are Bounces,Sourcegroups(primarily Google, tableausoftware, visualisingdata, Facebook), Timeinpage, Uniquepageviews and Visits. 
 
 
-Question-4 (Factors impacting Exit page) - step-wise models:
+Factors impacting Exit page - step-wise models:
 
 ```{r}
 library(memisc)
@@ -148,14 +147,14 @@ plot(M5)
 ```
 
 
-Model Inpterpretation (Ques. 4):
+Model Inpterpretation:
 1. M5 model gives optimal results with lowest no. of variables compare to all other models.
 2. Model gives 0.79 adj. R sq. with p-value < 2.2e-16 and F stat: 1.101e+04
 3. Key factors impacting exits are Bounces, Sourcegroup(fb, google, tableau, visualising data), Timeinpage and Uniquepageviews
 4. vif less than 10 in all variables of the M5 model
 
 
-Question-5 (Factors impacting Bounce):
+Factors impacting Bounce rate:
 
 ```{r}
 library(memisc)
@@ -186,7 +185,7 @@ plot(M6_bounce)
 ```
 
 
-Model Inpterpretation (Ques. 5):
+Model Inpterpretation:
 1. M6_bounce model gives optimal results with lowest no. of variables compare to all other models.
 2. Model gives 0.7 adj. R sq. with p-value < 2.2e-16 and F stat: 4732
 3. Key factors impacting Bounces are - Sourcegroup(google, tableau, visualising data), Timeinpage and Uniquepageviews
